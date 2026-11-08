@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>現代極簡科學計算機</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* 玻璃擬物風格 Background Gradient & Glassmorphism */
+        body {
+            background: radial-gradient(circle at 50% 20%, #1e293b 0%, #0f172a 60%, #020617 100%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                        0 0 30px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 按鍵微光邊框與按壓動畫 */
+        .calc-btn {
+            position: relative;
+            transition: all 0.15s ease;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .calc-btn:hover {
+            filter: brightness(1.15);
+            transform: translateY(-1px);
+        }
+
+        .calc-btn:active {
+            transform: translateY(1px);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+            filter: brightness(0.95);
+        }
+
+        /* 滾動條美化 */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-3 sm:p-6 text-slate-100 min-h-screen">
+
+    <!-- 主計算機容器 -->
+    <div class="glass-card w-full max-w-md sm:max-w-lg rounded-3xl p-5 sm:p-6 relative overflow-hidden flex flex-col justify-between transition-all duration-300">
+        
+        <!-- 頂部工具列 (模式切換 / 歷史紀錄按鈕) -->
+        <div class="flex justify-between items-center mb-4 text-xs sm:text-sm font-medium text-slate-400">
+            <div class="flex items-center space-x-2 bg-slate-800/80 p-1 rounded-full border border-slate-700/50">
+                <button id="mode-basic" onclick="setMode('basic')" class="px-3 py-1 rounded-full bg-slate-700 text-white transition-all duration-200">基本</button>
+                <button id="mode-sci" onclick="setMode('scientific')" class="px-3 py-1 rounded-full hover:text-white transition-all duration-200">進階科學</button>
+            </div>
+            <button onclick="toggleHistory()" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/50 transition-all">
+                <i class="fa-solid me-1 fa-clock-rotate-left"></i>
+                <span>歷史紀錄</span>
+            </button>
+        </div>
+
+        <!-- 顯示區域 -->
+        <div class="bg-slate-900/60 rounded-2xl p-4 sm:p-5 mb-5 border border-slate-800/80 text-right flex flex-col justify-end min-h-[120px] sm:min-h-[140px] shadow-inner">
+            <!-- 上方：算式表達式歷程 -->
+            <div id="formula-display" class="text-slate-400 text-sm sm:text-base font-normal tracking-wide h-6 overflow-x-auto whitespace-nowrap mb-1">
+                <!-- 算式動態插入 -->
+            </div>
+            <!-- 下方：主數字輸入/結果 -->
+            <div id="main-display" class="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-white overflow-x-auto whitespace-nowrap">
+                0
+            </div>
+        </div>
+
+        <!-- 按鍵區 (Grid Layout) -->
+        <div class="flex flex-col gap-2.5 sm:gap-3">
+            
+            <!-- 科學計算按鍵區 (可折疊/展開) -->
+            <div id="sci-keys" class="grid grid-cols-4 sm:grid-cols-5 gap-2 sm:gap-2.5 transition-all duration-300 hidden">
+                <button onclick="inputSci('sin(')" class="calc-btn bg-slate-800/90 text-indigo-300 rounded-xl py-2.5 text-xs sm:text-sm font-semibold">sin</button>
+                <button onclick="inputSci('cos(')" class="calc-btn bg-slate-800/90 text-indigo-300 rounded-xl py-2.5 text-xs sm:text-sm font-semibold">cos</button>
+                <button onclick="inputSci('tan(')" class="calc-btn bg-slate-800/90 text-indigo-300 rounded-xl py-2.5 text-xs sm:text-sm font-semibold">tan</button>
+                <button onclick="inputSci('log(')" class="calc-btn bg-slate-800/90 text-indigo-300 rounded-xl py-2.5 text-xs sm:text-sm font-semibold">log</button>
+                <button onclick="inputSci('ln(')" class="calc-btn bg-slate-800/90 text-indigo-300 rounded-xl py-2.5 text-xs sm:text-sm font-semibold sm:col-span-1 hidden sm:block">ln</button>
+
+                <button onclick="inputOperator('^')" class="calc-btn bg-slate-800/90 text-indigo-300 rounded-xl py-2.5 text-xs sm:text-sm font-semibold">xʸ</button>
+                <button onclick="inputSquare()" class="calc-btn bg-slate-800/90 text-indigo-300 rounded-xl py-2.5 text-xs sm:text-sm font-semibold">x²</button>
+                <button onclick="inputSqrt()" class="calc-btn bg-slate-800/90 text-indigo-300 rounded-xl py-2.5 text-xs sm:text-sm font-semibold">√x</button>
+                <button onclick="inputReciprocal()" class="calc-btn bg-slate-800/90 text-indigo-300 rounded-xl py-2.5 text-xs sm:text-sm font-semibold">1/x</button>
+                <button onclick="inputSci('π')" class="calc-btn bg-slate-800/90 text-indigo-300 rounded-xl py-2.5 text-xs sm:text-sm font-semibold sm:col-span-1 hidden sm:block">π</button>
+            </div>
+
+            <!-- 基本計算按鍵區 -->
+            <div class="grid grid-cols-4 gap-2 sm:gap-3 text-lg sm:text-xl font-medium">
+                <!-- 第一排 -->
+                <button onclick="clearAll()" class="calc-btn bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-2xl py-3 sm:py-3.5 hover:bg-rose-500/30">AC</button>
+                <button onclick="backspace()" class="calc-btn bg-slate-700/60 text-slate-200 rounded-2xl py-3 sm:py-3.5"><i class="fa-solid fa-backspace text-base"></i></button>
+                <button onclick="inputPercent()" class="calc-btn bg-slate-700/60 text-indigo-300 rounded-2xl py-3 sm:py-3.5">%</button>
+                <button onclick="inputOperator('÷')" class="calc-btn bg-amber-500 text-white rounded-2xl py-3 sm:py-3.5 font-bold">÷</button>
+
+                <!-- 第二排 -->
+                <button onclick="inputDigit('7')" class="calc-btn bg-slate-800/80 text-white rounded-2xl py-3 sm:py-3.5">7</button>
+                <button onclick="inputDigit('8')" class="calc-btn bg-slate-800/80 text-white rounded-2xl py-3 sm:py-3.5">8</button>
+                <button onclick="inputDigit('9')" class="calc-btn bg-slate-800/80 text-white rounded-2xl py-3 sm:py-3.5">9</button>
+                <button onclick="inputOperator('×')" class="calc-btn bg-amber-500 text-white rounded-2xl py-3 sm:py-3.5 font-bold">×</button>
+
+                <!-- 第三排 -->
+                <button onclick="inputDigit('4')" class="calc-btn bg-slate-800/80 text-white rounded-2xl py-3 sm:py-3.5">4</button>
+                <button onclick="inputDigit('5')" class="calc-btn bg-slate-800/80 text-white rounded-2xl py-3 sm:py-3.5">5</button>
+                <button onclick="inputDigit('6')" class="calc-btn bg-slate-800/80 text-white rounded-2xl py-3 sm:py-3.5">6</button>
+                <button onclick="inputOperator('-')" class="calc-btn bg-amber-500 text-white rounded-2xl py-3 sm:py-3.5 font-bold">−</button>
+
+                <!-- 第四排 -->
+                <button onclick="inputDigit('1')" class="calc-btn bg-slate-800/80 text-white rounded-2xl py-3 sm:py-3.5">1</button>
+                <button onclick="inputDigit('2')" class="calc-btn bg-slate-800/80 text-white rounded-2xl py-3 sm:py-3.5">2</button>
+                <button onclick="inputDigit('3')" class="calc-btn bg-slate-800/80 text-white rounded-2xl py-3 sm:py-3.5">3</button>
+                <button onclick="inputOperator('+')" class="calc-btn bg-amber-500 text-white rounded-2xl py-3 sm:py-3.5 font-bold">+</button>
+
+                <!-- 第五排 -->
+                <button onclick="toggleSign()" class="calc-btn bg-slate-800/80 text-slate-300 rounded-2xl py-3 sm:py-3.5 text-base">±</button>
+                <button onclick="inputDigit('0')" class="calc-btn bg-slate-800/80 text-white rounded-2xl py-3 sm:py-3.5">0</button>
+                <button onclick="inputDot()" class="calc-btn bg-slate-800/80 text-white rounded-2xl py-3 sm:py-3.5">.</button>
+                <button onclick="calculateResult()" class="calc-btn bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl py-3 sm:py-3.5 font-bold shadow-lg shadow-indigo-600/30">=</button>
+            </div>
+        </div>
+
+        <!-- 歷史紀錄面板 (抽屜式滑出) -->
+        <div id="history-panel" class="absolute inset-0 bg-slate-900/95 backdrop-blur-xl z-20 p-5 flex flex-col justify-between translate-y-full transition-transform duration-300 rounded-3xl">
+            <div>
+                <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
+                    <h3 class="text-base font-semibold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-indigo-400"></i> 計算歷程紀錄
+                    </h3>
+                    <button onclick="toggleHistory()" class="text-slate-400 hover:text-white p-1">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+                <!-- 紀錄列表 -->
+                <div id="history-list" class="space-y-3 max-h-[340px] overflow-y-auto pr-1">
+                    <p class="text-slate-500 text-center py-8 text-sm">尚無計算紀錄</p>
+                </div>
+            </div>
+            
+            <div class="pt-3 border-t border-slate-800 flex justify-between items-center">
+                <button onclick="clearHistory()" class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                    <i class="fa-solid fa-trash-can"></i> 清除紀錄
+                </button>
+                <span class="text-xs text-slate-500">點擊紀錄可帶入結果</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 腳本邏輯 -->
+    <script>
+        // 計算機核心狀態 variables
+        let currentExpression = '';
+        let resultDisplayed = false;
+        let historyLog = [];
+
+        const mainDisplay = document.getElementById('main-display');
+        const formulaDisplay = document.getElementById('formula-display');
+        const sciKeys = document.getElementById('sci-keys');
+        const historyPanel = document.getElementById('history-panel');
+        const historyList = document.getElementById('history-list');
+
+        // 更新螢幕顯示
+        function updateDisplay(formula = '', result = '0') {
+            formulaDisplay.innerText = formula;
+            mainDisplay.innerText = result || '0';
+        }
+
+        // 輸入數字
+        function inputDigit(digit) {
+            if (resultDisplayed) {
+                currentExpression = digit;
+                resultDisplayed = false;
+            } else {
+                if (currentExpression === '0') {
+                    currentExpression = digit;
+                } else {
+                    currentExpression += digit;
+                }
+            }
+            updateDisplay(currentExpression, currentExpression);
+        }
+
+        // 輸入小數點
+        function inputDot() {
+            if (resultDisplayed) {
+                currentExpression = '0.';
+                resultDisplayed = false;
+            } else {
+                // 簡易檢查避免重複連續點
+                const lastToken = currentExpression.split(/[\+\−\×\÷\^]/).pop();
+                if (!lastToken.includes('.')) {
+                    currentExpression += currentExpression === '' ? '0.' : '.';
+                }
+            }
+            updateDisplay(formulaDisplay.innerText, currentExpression);
+        }
+
+        // 輸入運算子
+        function inputOperator(op) {
+            resultDisplayed = false;
+            if (currentExpression === '' && op === '-') {
+                currentExpression = '-';
+                updateDisplay('', currentExpression);
+                return;
+            }
+
+            if (currentExpression === '') return;
+
+            const lastChar = currentExpression.slice(-1);
+            if (['+', '-', '×', '÷', '^'].includes(lastChar)) {
+                currentExpression = currentExpression.slice(0, -1) + op;
+            } else {
+                currentExpression += op;
+            }
+            updateDisplay('', currentExpression);
+        }
+
+        // 科學計算專用輸入
+        function inputSci(fn) {
+            if (resultDisplayed) {
+                currentExpression = fn;
+                resultDisplayed = false;
+            } else {
+                currentExpression += fn;
+            }
+            updateDisplay('', currentExpression);
+        }
+
+        // 括號輸入輔助
+        function inputBracket() {
+            if (resultDisplayed) {
+                currentExpression = '(';
+                resultDisplayed = false;
+            } else {
+                const openCount = (currentExpression.match(/\(/g) || []).length;
+                const closeCount = (currentExpression.match(/\)/g) || []).length;
+                const lastChar = currentExpression.slice(-1);
+
+                if (openCount > closeCount && !['+', '-', '×', '÷', '(', '^'].includes(lastChar)) {
+                    currentExpression += ')';
+                } else {
+                    currentExpression += '(';
+                }
+            }
+            updateDisplay('', currentExpression);
+        }
+
+        // 平方 x²
+        function inputSquare() {
+            if (!currentExpression) return;
+            currentExpression = `(${currentExpression})^2`;
+            calculateResult();
+        }
+
+        // 開根號 √x
+        function inputSqrt() {
+            if (!currentExpression) return;
+            currentExpression = `sqrt(${currentExpression})`;
+            calculateResult();
+        }
+
+        // 倒數 1/x
+        function inputReciprocal() {
+            if (!currentExpression) return;
+            currentExpression = `1/(${currentExpression})`;
+            calculateResult();
+        }
+
+        // 百分比 %
+        function inputPercent() {
+            if (!currentExpression) return;
+            currentExpression = `(${currentExpression})/100`;
+            calculateResult();
+        }
+
+        // 正負號變換 ±
+        function toggleSign() {
+            if (!currentExpression) return;
+            if (currentExpression.startsWith('-')) {
+                currentExpression = currentExpression.slice(1);
+            } else {
+                currentExpression = '-' + currentExpression;
+            }
+            updateDisplay('', currentExpression);
+        }
+
+        // 刪除 / 退格 Backspace
+        function backspace() {
+            if (resultDisplayed) {
+                clearAll();
+                return;
+            }
+            currentExpression = currentExpression.slice(0, -1);
+            updateDisplay('', currentExpression || '0');
+        }
+
+        // 全清除 AC
+        function clearAll() {
+            currentExpression = '';
+            resultDisplayed = false;
+            updateDisplay('', '0');
+        }
+
+        // 計算結果
+        function calculateResult() {
+            if (!currentExpression) return;
+
+            let sanitized = currentExpression
+                .replace(/×/g, '*')
+                .replace(/÷/g, '/')
+                .replace(/π/g, 'Math.PI')
+                .replace(/sin\(/g, 'Math.sin(')
+                .replace(/cos\(/g, 'Math.cos(')
+                .replace(/tan\(/g, 'Math.tan(')
+                .replace(/log\(/g, 'Math.log10(')
+                .replace(/ln\(/g, 'Math.log(')
+                .replace(/sqrt\(/g, 'Math.sqrt(')
+                .replace(/\^/g, '**');
+
+            try {
+                // 安全評估表達式
+                let evalResult = Function(`"use strict"; return (${sanitized})`)();
+                
+                // 浮點數精度處理 (最多留 8 位小數)
+                if (typeof evalResult === 'number' && !isNaN(evalResult)) {
+                    evalResult = Math.round(evalResult * 1e8) / 1e8;
+                } else {
+                    throw new Error('Invalid Result');
+                }
+
+                // 記錄歷史
+                addHistory(currentExpression, evalResult);
+
+                // 更新顯示
+                updateDisplay(currentExpression + ' =', evalResult.toString());
+                currentExpression = evalResult.toString();
+                resultDisplayed = true;
+            } catch (error) {
+                updateDisplay(currentExpression, '錯誤');
+                resultDisplayed = true;
+            }
+        }
+
+        // 切換模式 (基本 / 進階科學)
+        function setMode(mode) {
+            const btnBasic = document.getElementById('mode-basic');
+            const btnSci = document.getElementById('mode-sci');
+
+            if (mode === 'scientific') {
+                sciKeys.classList.remove('hidden');
+                btnSci.classList.add('bg-slate-700', 'text-white');
+                btnSci.classList.remove('hover:text-white');
+                btnBasic.classList.remove('bg-slate-700', 'text-white');
+            } else {
+                sciKeys.classList.add('hidden');
+                btnBasic.classList.add('bg-slate-700', 'text-white');
+                btnSci.classList.remove('bg-slate-700', 'text-white');
+            }
+        }
+
+        // 歷史紀錄處理
+        function toggleHistory() {
+            historyPanel.classList.toggle('translate-y-full');
+        }
+
+        function addHistory(expression, result) {
+            historyLog.unshift({ expression, result });
+            renderHistory();
+        }
+
+        function clearHistory() {
+            historyLog = [];
+            renderHistory();
+        }
+
+        function renderHistory() {
+            if (historyLog.length === 0) {
+                historyList.innerHTML = `<p class="text-slate-500 text-center py-8 text-sm">尚無計算紀錄</p>`;
+                return;
+            }
+
+            historyList.innerHTML = historyLog.map((item, index) => `
+                <div onclick="useHistoryResult('${item.result}')" class="bg-slate-800/50 hover:bg-slate-800 p-3 rounded-xl cursor-pointer border border-slate-700/40 transition-all text-right">
+                    <div class="text-xs text-slate-400 font-mono mb-0.5">${item.expression} =</div>
+                    <div class="text-lg font-semibold text-indigo-300 font-mono">${item.result}</div>
+                </div>
+            `).join('');
+        }
+
+        function useHistoryResult(val) {
+            currentExpression = val;
+            resultDisplayed = false;
+            updateDisplay('', currentExpression);
+            toggleHistory();
+        }
+
+        // 實作實體鍵盤支援
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= '0' && e.key <= '9') inputDigit(e.key);
+            if (e.key === '.') inputDot();
+            if (e.key === '+') inputOperator('+');
+            if (e.key === '-') inputOperator('-');
+            if (e.key === '*') inputOperator('×');
+            if (e.key === '/') { e.preventDefault(); inputOperator('÷'); }
+            if (e.key === '%') inputPercent();
+            if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); calculateResult(); }
+            if (e.key === 'Backspace') { e.preventDefault(); backspace(); }
+            if (e.key === 'Escape') clearAll();
+            if (e.key === '(' || e.key === ')') inputBracket();
+            if (e.key === '^') inputOperator('^');
+        });
+    </script>
+</body>
+</html>
