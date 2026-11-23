@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>釣魚世界 Fisch</title>
+<style>
+:root{--bg:#07202e;--ink:#f6ead3;--accent:#f2a65a;--card:rgba(8,30,44,.9);color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;overscroll-behavior:none;user-select:none;-webkit-user-select:none}
+body{display:flex;align-items:center;justify-content:center}
+#wrap{position:relative;width:100%;max-width:1100px;height:min(calc(100vh - 16px),720px);overflow:hidden;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
+canvas#c3{display:block;width:100%;height:100%;touch-action:none}
+.box{position:absolute;background:var(--card);border:3px solid rgba(255,255,255,.85);box-shadow:0 6px 0 rgba(0,0,0,.35);border-radius:10px;padding:12px 16px;font-size:18px;line-height:1.6}
+#hud{left:10px;top:10px;font-weight:800;font-size:24px;z-index:8}
+#hud small{display:block;font-weight:600;font-size:15px;opacity:.95}
+#mini{position:absolute;left:10px;top:158px;width:140px;height:140px;border-radius:12px;border:2px solid rgba(255,255,255,.45);background:rgba(8,30,44,.8);cursor:pointer;z-index:8}
+#pl{right:10px;top:10px;min-width:210px;max-width:46%;font-size:15px;z-index:8}
+#pl div{display:flex;justify-content:space-between;gap:10px;white-space:nowrap}
+#pl span:first-child{overflow:hidden;text-overflow:ellipsis}
+#pop{position:absolute;left:50%;top:24%;font-size:44px;font-weight:900;pointer-events:none;opacity:0;color:#ffe27a;text-shadow:0 3px 10px rgba(0,0,0,.85);transform:translateX(-50%);white-space:nowrap;z-index:20}
+#pop.go{animation:up 1.15s ease-out}
+@keyframes up{0%{opacity:1;transform:translate(-50%,0) scale(.92)}20%{transform:translate(-50%,-10px) scale(1.04)}100%{opacity:0;transform:translate(-50%,-65px) scale(1)}}
+#chg{position:absolute;left:50%;bottom:150px;width:320px;height:26px;transform:translateX(-50%);border-radius:9px;background:rgba(0,0,0,.55);border:2px solid #fff;overflow:hidden;display:none;z-index:12}
+#chg i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7bd88f,#ffd23f,#ff5f6d)}
+#reel{position:absolute;right:18%;top:50%;transform:translateY(-50%);display:none;gap:10px;z-index:12;align-items:flex-end}
+#trk{position:relative;width:64px;height:360px;border-radius:10px;background:rgba(8,30,44,.88);border:2px solid #fff;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+#bar{position:absolute;left:0;width:100%;background:rgba(123,216,143,.75);border-top:2px solid #b8ffc6;border-bottom:2px solid #b8ffc6}
+#fsh{position:absolute;left:9px;width:46px;height:46px;margin-bottom:-23px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff3a8,#ffd23f 60%,#d48806);border:2px solid #7a4b00;display:flex;align-items:center;justify-content:center;font-size:24px}
+#fsh::after{content:"🐟"}
+#prg{width:22px;height:360px;border-radius:8px;background:rgba(8,30,44,.88);border:2px solid #fff;position:relative;overflow:hidden}
+#prg i{position:absolute;bottom:0;left:0;width:100%;background:linear-gradient(0deg,#e07a22,#ffd23f)}
+#res{left:50%;top:36%;transform:translate(-50%,-50%);text-align:center;display:none;z-index:22;min-width:270px;font-size:20px}
+#res b{font-size:32px;display:block}
+#panel,#dexbox{left:50%;top:50%;transform:translate(-50%,-50%);width:min(94%,620px);max-height:86%;overflow:auto;display:none;padding:18px;z-index:25}
+#panel.show,#dexbox.show{display:block}
+#panel h3,#dexbox h3{margin:14px 0 6px;font-size:21px;border-left:4px solid var(--accent);padding-left:8px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.12);font-size:16px}
+.row.dim{opacity:.42}
+.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:rgba(255,255,255,.14);margin-left:6px}
+button{font:inherit;font-weight:700;font-size:18px;padding:12px 24px;border:0;border-radius:999px;background:var(--accent);color:#2a1606;cursor:pointer;touch-action:manipulation;transition:transform .08s,filter .12s}
+button:active:not(:disabled){transform:scale(.96)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.alt{background:#2b4e66;color:var(--ink)}
+button.sm{padding:6px 14px;font-size:14px;width:auto!important;margin:0!important}
+button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+#panel button.full,#dexbox button.full{width:100%;margin:10px 0}
+#joy{position:absolute;left:18px;bottom:18px;width:146px;height:146px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.32);touch-action:none;z-index:10}
+#knob{position:absolute;left:45px;top:45px;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.58);pointer-events:none}
+#act{position:absolute;right:18px;bottom:20px;width:138px;height:138px;border-radius:50%;font-size:25px;padding:0;z-index:10;touch-action:none;box-shadow:0 6px 20px rgba(0,0,0,.45)}
+#shopbtn{position:absolute;left:50%;transform:translateX(-50%);bottom:24px;display:none;z-index:10}
+#mapbtn{position:absolute;left:10px;top:308px;z-index:8;padding:8px 14px;font-size:15px}
+#dexbtn{position:absolute;left:10px;top:352px;z-index:8;padding:8px 14px;font-size:15px}
+#soundbtn{position:absolute;left:10px;top:396px;z-index:8;padding:8px 14px;font-size:15px}
+#mapbox{left:50%;top:50%;transform:translate(-50%,-50%);display:none;z-index:26;padding:12px;text-align:center}
+#bigmap{width:min(86vw,min(76vh,600px));height:min(86vw,min(76vh,600px));display:block;border-radius:8px;margin-bottom:10px}
+#boatbtn{position:absolute;left:50%;transform:translateX(-50%);bottom:86px;display:none;z-index:10}
+#xh{position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 4px #000;display:none;pointer-events:none;z-index:9}
+#slb{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:10;padding:8px 16px;font-size:15px}
+#ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;background:rgba(7,32,46,.88);z-index:30;backdrop-filter:blur(4px)}
+#ov.hide{display:none}
+h1{font-size:50px;margin:0;letter-spacing:.1em;font-weight:900;text-shadow:0 4px 16px rgba(0,0,0,.6)}
+#ov p{margin:0;line-height:1.7;max-width:29em;font-size:17px}
+</style>
+</head>
+<body>
+<div id="wrap">
+<canvas id="c3"></canvas>
+<div class="box" id="hud"></div>
+<canvas id="mini" width="140" height="140" title="點擊開啟大地圖"></canvas>
+<div class="box" id="pl"></div>
+<div id="pop"></div>
+<div id="xh"></div>
+<button id="boatbtn">上船（F）</button>
+<button id="mapbtn" class="alt">🗺 地圖（M）</button>
+<button id="dexbtn" class="alt">📖 圖鑑（B）</button>
+<button id="soundbtn" class="alt">🔊 音效：開</button>
+<div class="box" id="dexbox"></div>
+<div class="box" id="mapbox"><canvas id="bigmap" width="640" height="640"></canvas><button id="mapx" class="alt">關閉地圖（M）</button></div>
+<button id="slb" class="alt">🔒 鎖定視角</button>
+<div id="chg"><i></i></div>
+<div id="reel"><div id="trk"><div id="bar"></div><div id="fsh"></div></div><div id="prg"><i></i></div></div>
+<div class="box" id="res"></div>
+<div id="joy"><div id="knob"></div></div>
+<button id="act">拋竿</button>
+<button id="shopbtn">商店（E）</button>
+<div class="box" id="panel"></div>
+<div id="ov">
+<h1>釣魚世界</h1>
+<p>WASD／方向鍵（手機用左下搖桿）走動，面向水面<b>按住空白鍵（或右下按鈕、滑鼠左鍵）蓄力，放開拋竿</b>。<br>
+浮標下沉出現「！」時立刻按一下上鉤，接著<b>按住讓綠色框上升、放開下降</b>，把框套住黃色的魚直到進度條填滿。<br>
+魚有稀有度、重量與突變；<b>夜晚</b>會有專屬夜行魚種。在岸邊按<b>「上船」（F）</b>搭船探索 9 座島嶼，各島商店販售限定釣竿，新手港灣造船廠可升級船隻！<br>
+<b>按 Shift 開啟鎖定視角</b>（滑鼠控制視角、角色面向準星、WASD 相對鏡頭移動）。</p>
+<button id="b">進入世界</button>
+</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=id=>document.getElementById(id),wrap=$('wrap'),RD=Math.random;
+
+/* ---- 簡易 WebAudio 合成音效 ---- */
+let audioCtx=null,soundOn=true;
+function sfx(type){
+  if(!soundOn)return;
+  try{
+    if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    const t=audioCtx.currentTime,o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.connect(g);g.connect(audioCtx.destination);
+    if(type==='cast'){o.type='sine';o.frequency.setValueAtTime(320,t);o.frequency.exponentialRampToValueAtTime(680,t+.16);g.gain.setValueAtTime(.14,t);g.gain.exponentialRampToValueAtTime(.001,t+.18);o.start(t);o.stop(t+.19)}
+    else if(type==='splash'){o.type='triangle';o.frequency.setValueAtTime(190,t);o.frequency.exponentialRampToValueAtTime(65,t+.25);g.gain.setValueAtTime(.22,t);g.gain.exponentialRampToValueAtTime(.001,t+.26);o.start(t);o.stop(t+.27)}
+    else if(type==='bite'){o.type='square';o.frequency.setValueAtTime(587,t);o.frequency.setValueAtTime(880,t+.08);g.gain.setValueAtTime(.16,t);g.gain.exponentialRampToValueAtTime(.001,t+.22);o.start(t);o.stop(t+.23)}
+    else if(type==='catch'){o.type='triangle';[523,659,784,1046].forEach((f,i)=>o.frequency.setValueAtTime(f,t+i*.07));g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.36);o.start(t);o.stop(t+.37)}
+    else if(type==='coin'){o.type='sine';o.frequency.setValueAtTime(987,t);o.frequency.setValueAtTime(1318,t+.07);g.gain.setValueAtTime(.16,t);g.gain.exponentialRampToValueAtTime(.001,t+.24);o.start(t);o.stop(t+.25)}
+    else if(type==='fail'){o.type='sawtooth';o.frequency.setValueAtTime(240,t);o.frequency.linearRampToValueAtTime(130,t+.3);g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+.32);o.start(t);o.stop(t+.33)}
+  }catch(e){}
+}
+$('soundbtn').onclick=()=>{soundOn=!soundOn;$('soundbtn').textContent=soundOn?'🔊 音效：開':'🔇 音效：關'};
+
+/* ---- 遊戲資料庫 ---- */
+const RN=['普通','罕見','稀有','傳說','神話','奇異'],RC=['#cfd8dc','#7bd88f','#6ab7ff','#ffd23f','#d17bff','#ff5f6d'],RW=[60,26,10,3.5,1,.25];
+const ROD=[
+  {n:'新手竿',p:0,luck:0,ctrl:.22,res:0,lure:5.5,pow:11},
+  {n:'木製釣竿',p:300,luck:15,ctrl:.26,res:6,lure:4.8,pow:14},
+  {n:'鋼製釣竿',p:1500,luck:40,ctrl:.32,res:12,lure:4.0,pow:17},
+  {n:'符文釣竿',p:8000,luck:90,ctrl:.38,res:20,lure:3.2,pow:20},
+  {n:'傳說金竿',p:40000,luck:200,ctrl:.46,res:30,lure:2.4,pow:24},
+  {n:'森林之心竿',p:3000,luck:110,ctrl:.40,res:16,lure:3.5,pow:18},
+  {n:'珊瑚女王竿',p:9000,luck:200,ctrl:.44,res:24,lure:2.8,pow:22},
+  {n:'極光竿',p:30000,luck:330,ctrl:.50,res:32,lure:2.2,pow:26},
+  {n:'深淵支配者',p:90000,luck:600,ctrl:.58,res:44,lure:1.6,pow:30},
+  {n:'沉船船長竿',p:50000,luck:450,ctrl:.54,res:40,lure:1.8,pow:28},
+  {n:'沼澤王者竿',p:120000,luck:700,ctrl:.60,res:50,lure:1.5,pow:32},
+  {n:'熔岩帝王竿',p:300000,luck:1100,ctrl:.66,res:60,lure:1.2,pow:36},
+  {n:'星辰創世竿',p:1000000,luck:2000,ctrl:.74,res:75,lure:1.0,pow:42}
+];
+const ISLOF=[0,1,2,3,4,1,2,3,4,5,6,7,8],QOF=[-1,-1,-1,-1,-1,0,1,2,3,4,5,6,7];
+ROD.forEach((r,i)=>{r.isl=ISLOF[i];r.q=QOF[i]});
+
+const BOATS=[
+  {n:'小木舟',p:0,v:16,a:.8,hc:0xb08a5a,sc:0x6b4a2b},
+  {n:'漁船',p:1200,v:28,a:1.0,hc:0xf4f1ea,sc:0xc8553d},
+  {n:'快艇',p:8000,v:48,a:1.3,hc:0x3a6fd8,sc:0xf4f1ea},
+  {n:'遊艇',p:40000,v:75,a:1.6,hc:0x1f2933,sc:0xffd23f},
+  {n:'氣墊飛艇',p:200000,v:115,a:2.1,hc:0xffd23f,sc:0xff5f6d}
+];
+
+const QT=[
+  '累計釣到 3 種「稀有」以上的魚',
+  '釣到一條 200 公斤以上的魚',
+  '釣到一種「神話」以上的魚',
+  '圖鑑收集 18 種魚',
+  '累計釣到 120 條魚',
+  '累計賣魚收入 $200,000',
+  '釣到 3 種「奇異」魚',
+  '圖鑑收集全部 45 種魚'
+];
+
+const SP=[
+  ['小銀魚',0,20,.1,.6,[0]],['鯽魚',0,12,.3,2,[0,1]],['鱒魚',1,25,1,4,[0,1]],['鰻魚',2,50,1,5,[0],1],['金鯉',3,120,2,8,[0]],['金龍魚',5,600,5,15,[0,1,2]],
+  ['青花魚',0,18,.3,1.5,[1]],['鱸魚',1,35,1,6,[1]],['翡翠龍魚',2,70,2,10,[1]],['月光鰻',3,160,3,12,[1],1],['森林鱘',4,100,20,80,[1]],
+  ['小丑魚',0,40,.1,.4,[2]],['河豚',1,60,.5,3,[2]],['魔鬼魚',2,90,10,60,[2]],['神仙魚',3,200,.5,3,[2]],['鯨鯊',4,40,300,900,[2]],
+  ['鱈魚',0,40,2,15,[3]],['鮭魚',1,70,3,20,[3]],['冰晶魚',3,350,2,10,[3]],['極地鯨幼',4,30,500,1500,[3]],
+  ['燈籠魚',2,160,1,8,[4]],['深淵鮟鱇',3,400,5,40,[4]],['幽靈魚',4,600,10,60,[4],1],['大白鯊',4,50,200,800,[4]],['利維坦',5,40,2000,6000,[4]],
+  ['沙丁魚',0,22,.1,.5,[5]],['章魚',1,70,2,12,[5]],['燈眼魚',2,120,.5,3,[5],1],['金幣龜',3,420,10,60,[5]],['沉船幽魂鱗',4,900,20,90,[5],1],
+  ['泥鰍',0,25,.1,.8,[6]],['鱷雀鱔',1,80,5,40,[6]],['毒蛙魚',2,150,.5,3,[6]],['沼澤鰻王',3,480,10,60,[6],1],['遠古肺魚',4,700,30,120,[6]],
+  ['熔岩小魚',1,90,.2,1,[7]],['火焰鯰',2,200,3,15,[7]],['岩漿鰻',3,560,10,50,[7]],['炎魔魚',4,1000,40,200,[7]],['太陽金龍',5,3000,10,40,[7]],
+  ['雲魚',1,100,.5,3,[8]],['彩虹魚',2,250,1,8,[8]],['星辰魚',3,650,2,10,[8],1],['極光鯨',4,60,400,1200,[8]],['天使魟',5,1500,50,150,[8]]
+].map(a=>({n:a[0],r:a[1],v:a[2],w0:a[3],w1:a[4],z:a[5],night:!!a[6]}));
+
+const MUT=[['閃亮',1.5,.06],['白化',2,.03],['巨大',2.5,.02],['璀璨',3,.012]];
+const ISL=[
+  {n:'新手港灣',cx:0,cz:0,r:17,grass:0x6ab04c,tree:'oak',nt:9},
+  {n:'翡翠湖',cx:-170,cz:-70,r:14,grass:0x3f9d52,tree:'pine',nt:14},
+  {n:'珊瑚礁',cx:165,cz:-55,r:14,grass:0xecd9a0,tree:'palm',nt:10},
+  {n:'極地冰海',cx:140,cz:-230,r:14,grass:0xeaf4fb,tree:'ice',nt:10},
+  {n:'深淵海溝',cx:-70,cz:-250,r:14,grass:0x4b3f72,tree:'crystal',nt:12},
+  {n:'沉船灣',cx:-310,cz:-200,r:15,grass:0xe3cf93,tree:'palm',nt:10},
+  {n:'迷霧沼澤',cx:320,cz:-210,r:16,grass:0x4f7d4a,tree:'oak',nt:16},
+  {n:'熔岩火山',cx:260,cz:-390,r:15,grass:0x3b2f2f,tree:'lava',nt:12},
+  {n:'天空之島',cx:-200,cz:-410,r:15,grass:0xf4f1c8,tree:'oak',nt:12}
+];
+
+const foams=[],BR=[];
+const bridges=BR.map(([a,b])=>{const A=ISL[a],B=ISL[b],g=Math.atan2(B.cz-A.cz,B.cx-A.cx);
+  return{x1:A.cx+Math.cos(g)*(A.r-1),z1:A.cz+Math.sin(g)*(A.r-1),x2:B.cx-Math.cos(g)*(B.r-1),z2:B.cz-Math.sin(g)*(B.r-1),g}});
+function onBridge(x,z){for(const b of bridges){const dx=b.x2-b.x1,dz=b.z2-b.z1;let t=((x-b.x1)*dx+(z-b.z1)*dz)/(dx*dx+dz*dz);t=Math.max(0,Math.min(1,t));
+  if(Math.hypot(x-(b.x1+dx*t),z-(b.z1+dz*t))<1.6)return true}return false}
+function land(x,z){for(const I of ISL)if(Math.hypot(x-I.cx,z-I.cz)<I.r)return true;return false}
+function zoneAt(x,z){let bi=0,bd=1e9;ISL.forEach((I,i)=>{const d=Math.hypot(x-I.cx,z-I.cz)-I.r;if(d<bd){bd=d;bi=i}});return bi}
+
+/* ---- 玩家狀態與 LocalStorage 存檔 ---- */
+let money=0,rodLv=0,inv=[],best=SP.map(()=>0),vis=ISL.map((_,i)=>i===0),own=ROD.map((_,i)=>i===0),bown=BOATS.map((_,i)=>i===0),cnt=SP.map(()=>0),mus=SP.map(()=>0),earned=0,lastCatch='',lastT=0;
+let boatLv=0;
+const SAVE_KEY='fisch_3d_save_v1';
+function persist(){
+  try{
+    localStorage.setItem(SAVE_KEY,JSON.stringify({money,rodLv,boatLv,inv,best,vis,own,bown,cnt,mus,earned}));
+  }catch(e){}
+}
+function loadSave(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);
+    if(!raw)return;
+    const d=JSON.parse(raw);
+    if(typeof d.money==='number')money=d.money;
+    if(typeof d.rodLv==='number')rodLv=Math.min(ROD.length-1,Math.max(0,d.rodLv));
+    if(typeof d.boatLv==='number')boatLv=Math.min(BOATS.length-1,Math.max(0,d.boatLv));
+    if(Array.isArray(d.inv))inv=d.inv;
+    if(Array.isArray(d.best)&&d.best.length===SP.length)best=d.best;
+    if(Array.isArray(d.vis)&&d.vis.length===ISL.length)vis=d.vis;
+    if(Array.isArray(d.own)&&d.own.length===ROD.length)own=d.own;
+    if(Array.isArray(d.bown)&&d.bown.length===BOATS.length)bown=d.bown;
+    if(Array.isArray(d.cnt)&&d.cnt.length===SP.length)cnt=d.cnt;
+    if(Array.isArray(d.mus)&&d.mus.length===SP.length)mus=d.mus;
+    if(typeof d.earned==='number')earned=d.earned;
+  }catch(e){}
+}
+loadSave();
+
+/* ---- Three.js 場景建立 ---- */
+const cv=$('c3'),renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene(),SKY_D=new THREE.Color(0x9fd6f5),SKY_N=new THREE.Color(0x0b1530);
+scene.background=new THREE.Color(0x9fd6f5);scene.fog=new THREE.Fog(0x9fd6f5,220,750);
+const cam=new THREE.PerspectiveCamera(52,1,.1,1400),amb=new THREE.HemisphereLight(0xcfe9ff,0x6a8a5a,.78),sun=new THREE.DirectionalLight(0xfff4dd,.88);
+sun.position.set(30,60,20);scene.add(amb,sun,sun.target);renderer.shadowMap.enabled=true;sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);{const sc=sun.shadow.camera;sc.left=sc.bottom=-38;sc.right=sc.top=38;sc.far=160}
+const M=c=>new THREE.MeshLambertMaterial({color:c});
+const WW=1100,WH=860,WCZ=-200,wg=new THREE.PlaneGeometry(WW,WH,64,48),wp=wg.attributes.position;
+const surf=new THREE.Mesh(wg,new THREE.MeshPhongMaterial({map:(()=>{const c=document.createElement('canvas');c.width=WW;c.height=WH;const g=c.getContext('2d');g.fillStyle='#1d5fa0';g.fillRect(0,0,WW,WH);
+  ISL.forEach(I=>{const x=I.cx+WW/2,y=I.cz-WCZ+WH/2,gr=g.createRadialGradient(x,y,I.r*.9,x,y,I.r*2.6);gr.addColorStop(0,'rgba(88,224,210,.95)');gr.addColorStop(1,'rgba(88,224,210,0)');g.fillStyle=gr;g.beginPath();g.arc(x,y,I.r*2.6,0,7);g.fill()});
+  return new THREE.CanvasTexture(c)})(),transparent:true,opacity:.88,shininess:100,specular:0xffffff}));
+surf.rotation.x=-Math.PI/2;surf.position.z=WCZ;scene.add(surf);
+
+const clouds=[];for(let i=0;i<16;i++){const g=new THREE.Group();for(let j=0;j<4;j++){const m=new THREE.Mesh(new THREE.IcosahedronGeometry(3+RD()*3,0),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.88,fog:false}));m.position.set(j*4-6,RD()*1.5,RD()*3);m.scale.y=.55;g.add(m)}
+ g.position.set(-540+RD()*1080,52+RD()*25,-540+RD()*520);g.userData.s=1+RD()*1.5;scene.add(g);clouds.push(g)}
+const bed=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),M(0x1b5f6e));bed.rotation.x=-Math.PI/2;bed.position.set(0,-30,-200);scene.add(bed);
+
+function tree(kind,x,z){const g=new THREE.Group(),F=c=>new THREE.MeshLambertMaterial({color:c,flatShading:true}),sc=.8+RD()*.6;
+ if(kind==='ice'){const m=new THREE.Mesh(new THREE.ConeGeometry(.8+RD()*.8,2.5+RD()*3.5,5),new THREE.MeshPhongMaterial({color:0xcdeeff,flatShading:true,shininess:80}));m.position.y=1.3;g.add(m)}
+ else if(kind==='crystal'||kind==='lava'){for(let i=0;i<3;i++){const m=new THREE.Mesh(new THREE.OctahedronGeometry(.4+RD()*.6),new THREE.MeshPhongMaterial({color:0x9b6bff,emissive:0x5b2bd0,flatShading:true}));if(kind==='lava'){m.material.color.setHex(0xff6a2a);m.material.emissive.setHex(0xc02a00)}m.scale.y=2+RD();m.position.set((RD()-.5)*1.2,1.2,(RD()-.5)*1.2);m.rotation.y=RD()*3;g.add(m)}}
+ else{const t=new THREE.Mesh(new THREE.CylinderGeometry(.18,.3,kind==='palm'?3.2:2,7),F(0x6b4a2b));t.position.y=kind==='palm'?1.6:1;g.add(t);
+  if(kind==='pine'){for(let i=0;i<3;i++){const c=new THREE.Mesh(new THREE.ConeGeometry(1.5-i*.35,1.8,8),F(0x2f7d46+i*0x0a1008));c.position.y=2+i*1.1;g.add(c)}}
+  else if(kind==='palm'){for(let i=0;i<6;i++){const f=new THREE.Mesh(new THREE.ConeGeometry(.35,2.6,4),F(0x3fae5b));f.scale.z=.3;f.position.set(Math.cos(i*1.047)*.9,3.2,Math.sin(i*1.047)*.9);f.rotation.set(Math.sin(i*1.047)*1.1,0,-Math.cos(i*1.047)*1.1);g.add(f)}}
+  else{for(let i=0;i<3;i++){const c=new THREE.Mesh(new THREE.IcosahedronGeometry(1.1-i*.15,0),F(0x4fa84a+i*0x081008));c.position.set((i-1)*.5*(i%2),2.4+i*.55,(i-1)*.3);g.add(c)}}}
+ g.scale.setScalar(sc);g.rotation.y=RD()*6;g.traverse(o=>{o.castShadow=true});g.position.set(x,.6,z);scene.add(g)}
+
+function label(txt,x,y,z,s){const c=document.createElement('canvas');c.width=512;c.height=128;const g=c.getContext('2d');
+  g.fillStyle='rgba(8,30,44,.75)';g.beginPath();g.roundRect(8,8,496,112,24);g.fill();g.fillStyle='#f6ead3';g.font='700 54px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(txt,256,66);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false,transparent:true,fog:false}));
+  sp.position.set(x,y,z);sp.scale.set(s,s/4,1);sp.renderOrder=10;scene.add(sp)}
+
+ISL.forEach(I=>{
+  const sand=new THREE.Mesh(new THREE.CylinderGeometry(I.r*1.08,I.r*1.12,1.2,48),M(0xe6d5a1));sand.position.set(I.cx,-.1,I.cz);scene.add(sand);
+  const gt=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const q=c.getContext('2d');q.fillStyle='#fff';q.fillRect(0,0,64,64);q.fillStyle='#e6e6e6';q.beginPath();q.arc(32,32,15,0,7);q.fill();q.strokeStyle='#b5b5b5';q.lineWidth=3;q.stroke();const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(I.r,I.r);return t})();
+  const gr=new THREE.Mesh(new THREE.CylinderGeometry(I.r,I.r*1.02,1.2,48),new THREE.MeshLambertMaterial({color:I.grass,map:gt}));gr.receiveShadow=true;gr.position.set(I.cx,0,I.cz);scene.add(gr);
+  for(let j=0,n=0;j<80&&n<I.nt;j++){const a=RD()*6.283,r=I.r*(.25+.6*RD()),x=I.cx+Math.cos(a)*r,z=I.cz+Math.sin(a)*r;
+    if(Math.hypot(x-(I.cx+8),z-(I.cz-3))<6||Math.hypot(x,z-7)<5)continue;
+    tree(I.tree,x,z);n++}
+  for(let i=0;i<10;i++){const a=RD()*6.283,r=I.r*(.55+.4*RD()),x=I.cx+Math.cos(a)*r,z=I.cz+Math.sin(a)*r;
+    if(Math.hypot(x-(I.cx+8),z-(I.cz-3))<5)continue;
+    const rk=new THREE.Mesh(new THREE.DodecahedronGeometry(.4+RD()*.7,0),new THREE.MeshLambertMaterial({color:0x8a9099,flatShading:true}));rk.position.set(x,.7,z);rk.scale.y=.7;rk.rotation.set(RD()*3,RD()*3,0);rk.castShadow=true;scene.add(rk)}
+  const N=40,fl=new THREE.InstancedMesh(new THREE.BoxGeometry(.18,.18,.18),new THREE.MeshLambertMaterial({color:0xffffff}),N),mt=new THREE.Matrix4(),pal=[0xff7a9a,0xffe066,0xffffff,0xb48cff];
+  for(let i=0;i<N;i++){const a=RD()*6.283,r=I.r*(.15+.75*RD());mt.setPosition(I.cx+Math.cos(a)*r,.68,I.cz+Math.sin(a)*r);fl.setMatrixAt(i,mt);fl.setColorAt(i,new THREE.Color(pal[i%4]))}
+  fl.instanceColor.needsUpdate=true;scene.add(fl);
+  const foam=new THREE.Mesh(new THREE.RingGeometry(I.r*1.12,I.r*1.3,64),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.35,side:THREE.DoubleSide,depthWrite:false}));
+  foam.rotation.x=-Math.PI/2;foam.position.set(I.cx,.12,I.cz);scene.add(foam);foams.push(foam);
+  label(I.n,I.cx,14,I.cz,42)});
+
+ISL.forEach((I,ii)=>{const SHOP={x:I.cx+8,z:I.cz-3},g=new THREE.Group(),base=new THREE.Mesh(new THREE.BoxGeometry(4,2.6,4),M(0xc8553d)),roof=new THREE.Mesh(new THREE.ConeGeometry(3.6,1.8,4),M(0x5b3a2a)),door=new THREE.Mesh(new THREE.BoxGeometry(1,1.7,.1),M(0x3a2418));
+  base.position.y=1.3;roof.rotation.y=Math.PI/4;roof.position.y=3.5;door.position.set(0,.85,2.02);g.add(base,roof,door);g.position.set(SHOP.x,.6,SHOP.z);scene.add(g);label(ii===0?'造船廠・商店':'商店',SHOP.x,6.2,SHOP.z,11)});
+
+/* ---- 角色、釣線與船隻 ---- */
+const FACE=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const q=c.getContext('2d');q.fillStyle='#f5cd2f';q.fillRect(0,0,64,64);q.fillStyle='#2a2018';q.beginPath();q.arc(22,26,5,0,7);q.arc(42,26,5,0,7);q.fill();q.strokeStyle='#2a2018';q.lineWidth=4;q.lineCap='round';q.beginPath();q.arc(32,34,13,.25,Math.PI-.25);q.stroke();return new THREE.CanvasTexture(c)})();
+function mkChar(col){const g=new THREE.Group(),Y=0xf5cd2f,
+ B=(w,h,d,c,x,y,z,py)=>{const ge=new THREE.BoxGeometry(w,h,d);if(py)ge.translate(0,-h/2,0);const m=new THREE.Mesh(ge,M(c));m.position.set(x,y,z);return m};
+ const bd=B(.55,1,.95,col,0,1.3,0),belt=B(.58,.14,.98,0x2b2b3a,0,.85,0),pack=B(.3,.7,.6,0x6b4a2b,-.42,1.35,0),
+  hd=new THREE.Mesh(new THREE.BoxGeometry(.64,.64,.64),[new THREE.MeshLambertMaterial({map:FACE}),M(Y),M(Y),M(Y),M(Y),M(Y)]);
+ hd.position.y=2.12;
+ const hair=B(.68,.22,.68,0x4a2f1b,0,2.48,0),cap=B(.62,.22,.62,0x2f6f4f,0,2.7,0),brim=B(.3,.06,.7,0x2f6f4f,.4,2.6,0);
+ const ar=B(.28,.85,.28,Y,0,1.78,.62,1),al=B(.28,.85,.28,Y,0,1.78,-.62,1);ar.rotation.z=.9;
+ const l1=B(.42,.85,.42,0x2b3a55,0,.85,.23,1),l2=B(.42,.85,.42,0x2b3a55,0,.85,-.23,1),s1=B(.5,.18,.46,0x1b1b1b,.06,-.78,0),s2=s1.clone();
+ const rod=new THREE.Mesh(new THREE.CylinderGeometry(.03,.06,2.6,6),M(0x3a2418));rod.position.set(1.47,2.25,.62);rod.rotation.z=-.698;
+ g.add(bd,belt,pack,hd,hair,cap,brim,ar,al,l1,l2,rod);l1.add(s1);l2.add(s2);
+ g.scale.setScalar(1.4);g.userData={l1,l2,ar,al,rod,tip:new THREE.Vector3(2.3,3.24,.62)};g.traverse(o=>{o.castShadow=true});scene.add(g);return g}
+function mkLine(){const geo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
+  const l=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0xffffff}));l.frustumCulled=false;l.visible=false;scene.add(l);return{geo,l}}
+function setLine(L,a,b){const p=L.geo.attributes.position;p.setXYZ(0,a.x,a.y,a.z);p.setXYZ(1,b.x,b.y,b.z);p.needsUpdate=true}
+function mkBob(){const m=new THREE.Mesh(new THREE.SphereGeometry(.42,10,8),M(0xff4d3d));m.visible=false;scene.add(m);return m}
+function tipOf(g){return g.localToWorld(g.userData.tip.clone())}
+
+const myCol=[0x2e6f95,0x8a3b5b,0x4f7a3a,0x7a5ab5,0xb5772a,0xd94f3d][Math.floor(RD()*6)];
+function mkBoat(tier){tier=tier|0;const g=new THREE.Group(),sh=new THREE.Shape(),pts=[[3.2,0],[2.2,.95],[-2.5,1.15],[-3,.85],[-3,-.85],[-2.5,-1.15],[2.2,-.95]];
+ pts.forEach((p,i)=>i?sh.lineTo(p[0],p[1]):sh.moveTo(p[0],p[1]));
+ const hg=new THREE.ExtrudeGeometry(sh,{depth:.8,bevelEnabled:false});hg.rotateX(-Math.PI/2);
+ const hull=new THREE.Mesh(hg,M(BOATS[tier].hc)),stripe=new THREE.Mesh(hg,M(BOATS[tier].sc));stripe.scale.set(1.01,.18,1.01);stripe.position.y=.35;
+ const deck=new THREE.Mesh(new THREE.BoxGeometry(5.2,.1,1.7),M(0xb08a5a));deck.position.set(-.3,.82,0);
+ const cab=new THREE.Mesh(new THREE.BoxGeometry(1.6,1,1.4),M(0xf4f1ea));cab.position.set(-1.8,1.35,0);
+ const win=new THREE.Mesh(new THREE.BoxGeometry(.05,.45,1.2),new THREE.MeshPhongMaterial({color:0x6fd0f0,shininess:100}));win.position.set(-.98,1.5,0);
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(1.9,.1,1.7),M(0xc8553d));roof.position.set(-1.8,1.9,0);
+ const mot=new THREE.Mesh(new THREE.BoxGeometry(.5,.8,.4),M(0x333a44));mot.position.set(-3.1,.7,0);
+ const bench=new THREE.Mesh(new THREE.BoxGeometry(.5,.25,1.4),M(0x8a6a3f));bench.position.set(1.4,1,0);
+ g.add(hull,stripe,deck,cab,win,roof,mot,bench);if(tier>=2){const m2=mot.clone();m2.position.z=.5;mot.position.z=-.5;g.add(m2)}g.scale.set(1+tier*.1,1+tier*.04,1+tier*.08);g.traverse(o=>{o.castShadow=true});g.rotation.order='YXZ';scene.add(g);return g}
+
+const me=mkChar(myCol),myLine=mkLine(),bob=mkBob(),boat={x:0,z:22,a:0};
+let boatM=mkBoat(boatLv),onBoat=false,boatV=0,wk=0;
+function setBoat(t){boatLv=t;scene.remove(boatM);boatM=mkBoat(t)}
+
+const P={x:0,z:7,a:-Math.PI/2},aim={ok:false,x:0,z:0};
+const mk=new THREE.Mesh(new THREE.RingGeometry(.75,.95,40),new THREE.MeshBasicMaterial({color:0xffe27a,transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false}));
+mk.rotation.x=-Math.PI/2;mk.position.y=.65;mk.visible=false;scene.add(mk);
+
+const splashes=[];
+function splash(x,z){const m=new THREE.Mesh(new THREE.RingGeometry(.3,.45,32),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false}));
+  m.rotation.x=-Math.PI/2;m.position.set(x,.2,z);m.userData.t=0;scene.add(m);splashes.push(m)}
+
+let wf=0;
+function ambient(t,dt){
+  foams.forEach((f,i)=>{f.material.opacity=.28+Math.sin(t*1.5+i)*.1;f.scale.setScalar(1+Math.sin(t*.8+i)*.015)});
+  clouds.forEach(c=>{c.position.x+=dt*c.userData.s;if(c.position.x>540)c.position.x=-540});
+  wf^=1;
+  if(wf){
+    for(let i=0;i<wp.count;i++)wp.setZ(i,Math.sin(wp.getX(i)*.13+t*1.2)*.1+Math.cos(wp.getY(i)*.12+t*.9)*.08);
+    wp.needsUpdate=true;
+  }
+  for(let i=splashes.length-1;i>=0;i--){
+    const m=splashes[i];m.userData.t+=dt;const k=m.userData.t;
+    m.scale.setScalar(1+k*6);m.material.opacity=Math.max(0,.85-k*.95);
+    if(k>.9){scene.remove(m);splashes.splice(i,1)}
+  }
+}
+
+function resize(){const w=wrap.clientWidth,h=wrap.clientHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+addEventListener('resize',resize);resize();
+
+const pop=$('pop');
+function showPop(s){pop.textContent=s;pop.classList.remove('go');void pop.offsetWidth;pop.classList.add('go')}
+
+/* ---- 釣魚狀態機與操作 ---- */
+let st='idle',ch=0,chd=1,tw=0,bt=0,hx=0,hz=0,hy=.3,F=null,hold=false,hz0=0,playing=false,isNight=false;
+let prog=.35,bpos=.4,bv=0,fp=.5,ft=.5,ftm=0,resT=0;
+const ks={};let jx=0,jz=0,joyId=null,cy=-Math.PI/2,cp=.38,sl='ontouchstart' in window,rot=false,rotId=-1,lx=0,ly=0;
+let camYaw=cy,camPitch=cp;
+
+function setSL(v){
+  sl=v;$('xh').style.display=sl?'block':'none';
+  $('slb').textContent=sl?'🔓 解除鎖定':'🔒 鎖定視角';
+  if(!('ontouchstart' in window)){
+    try{if(sl)cv.requestPointerLock();else if(document.pointerLockElement)document.exitPointerLock()}catch(e){}
+  }
+}
+document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement&&sl&&!('ontouchstart' in window))setSL(false)});
+document.addEventListener('pointerlockerror',()=>setSL(false));
+$('slb').onclick=()=>setSL(!sl);setSL(sl);
+
+function panelOpen(){return $('panel').classList.contains('show')}
+function closeAllModals(){
+  $('panel').classList.remove('show');
+  dexOpen=false;$('dexbox').classList.remove('show');
+  mapOpen=false;$('mapbox').style.display='none';
+}
+
+function down(){
+  if(!playing||panelOpen()||mapOpen||dexOpen)return;
+  if(st==='idle'){
+    if(onBoat&&Math.abs(boatV)>2.5){showPop('停穩船隻再拋竿');return}
+    if(!aim.ok){showPop('前面沒有水面');return}
+    st='charge';ch=0;chd=1;$('chg').style.display='block';
+  }
+  else if(st==='wait'){st='idle';bob.visible=false;myLine.l.visible=false;showPop('收線太早')}
+  else if(st==='bite'){startReel();hold=true}
+  else if(st==='reel')hold=true;
+}
+function up(){hold=false;if(st==='charge')cast()}
+
+function cast(){
+  const R=ROD[rodLv],dist=3+ch*(R.pow-3);let ok=false;
+  for(let d=dist;d>=2;d-=.5){const x=P.x+Math.cos(P.a)*d,z=P.z+Math.sin(P.a)*d;if(!land(x,z)){hx=x;hz=z;ok=true;break}}
+  $('chg').style.display='none';
+  if(!ok){st='idle';showPop('前面沒有水面');return}
+  st='wait';tw=R.lure*(.45+.55*RD());hz0=zoneAt(hx,hz);
+  bob.visible=true;bob.position.set(hx,.25,hz);myLine.l.visible=true;
+  splash(hx,hz);sfx('cast');setTimeout(()=>sfx('splash'),120);
+}
+
+function roll(){
+  const R=ROD[rodLv],pool=SP.map((s,i)=>({s,i})).filter(o=>o.s.z.includes(hz0)&&(!o.s.night||isNight));
+  const wts=pool.map(o=>RW[o.s.r]*(o.s.r>=2?1+R.luck*o.s.r/60:1)*(o.s.night?1.5:1));
+  let w=wts.reduce((a,b)=>a+b,0)*RD(),k=0;for(;k<pool.length-1;k++){if((w-=wts[k])<0)break}
+  return pool[k];
+}
+
+function startReel(){
+  st='reel';prog=.36;bpos=.4;bv=0;fp=.5;ft=.5;ftm=0;
+  $('reel').style.display='flex';
+}
+
+function endReel(win){
+  $('reel').style.display='none';bob.visible=false;myLine.l.visible=false;hold=false;st='idle';
+  if(!win){sfx('fail');showPop('魚跑掉了…');return}
+  sfx('catch');
+  const s=F.s,wt=Math.round((s.w0+(s.w1-s.w0)*Math.pow(RD(),2))*100)/100;
+  let mi=-1,q=RD(),a=0;MUT.forEach((m,i)=>{a+=m[2];if(mi<0&&q<a)mi=i});
+  const val=Math.max(1,Math.round(s.v*wt*(mi>=0?MUT[mi][1]:1)));
+  inv.push({s:F.i,w:wt,m:mi,v:val});
+  const nb=wt>best[F.i];if(nb)best[F.i]=wt;
+  cnt[F.i]++;if(mi>=0)mus[F.i]|=1<<mi;
+  lastCatch=(mi>=0?MUT[mi][0]+' ':'')+s.n;lastT=Date.now();
+  const r=$('res');r.style.display='block';
+  r.innerHTML='<b style="color:'+RC[s.r]+'">'+(mi>=0?MUT[mi][0]+' ':'')+s.n+'</b>'+RN[s.r]+'・'+wt+' 公斤'+(nb?'・✨新紀錄！':'')+'<br>價值 $'+val;
+  resT=2.8;hud();persist();
+}
+
+function bag(){return inv.reduce((a,o)=>a+o.v,0)}
+function hud(){
+  const R=ROD[rodLv],B=BOATS[boatLv],I=ISL[zoneAt(P.x,P.z)];
+  $('hud').innerHTML='$'+money.toLocaleString()+'<small>'+I.n+'・'+(isNight?'🌙 夜晚':'☀️ 白天')+'<br>'+R.n+'（幸運 '+R.luck+'）｜'+B.n+'<br>背包 '+inv.length+' 條（約 $'+bag().toLocaleString()+'）</small>';
+}
+
+/* ---- 任務系統（完整補齊 8 個任務） ---- */
+function questOK(i){
+  const cg=SP.filter((s,k)=>best[k]>0);
+  switch(i){
+    case 0:return cg.filter(s=>s.r>=2).length>=3;
+    case 1:return best.some(b=>b>=200);
+    case 2:return cg.some(s=>s.r>=4);
+    case 3:return cg.length>=18;
+    case 4:return cnt.reduce((a,b)=>a+b,0)>=120;
+    case 5:return earned>=200000;
+    case 6:return cg.filter(s=>s.r===5).length>=3;
+    case 7:return cg.length>=SP.length;
+    default:return false;
+  }
+}
+
+/* ---- 商店與造船廠面板 ---- */
+function shopIdx(){if(onBoat)return -1;for(let i=0;i<ISL.length;i++)if(Math.hypot(P.x-(ISL[i].cx+8),P.z-(ISL[i].cz-3))<7)return i;return -1}
+function nearShop(){return shopIdx()>=0}
+
+function renderPanel(){
+  const si=shopIdx();if(si<0)return;
+  const R=ROD[rodLv],I=ISL[si];
+  let h='<h2>🏠 '+I.n+' — '+(si===0?'造船廠與商店':'島嶼商店')+'</h2>';
+  h+='<h3>🎒 漁獲背包（'+inv.length+' 條）</h3>';
+  h+='<button id="sell" class="full"'+(inv.length?'':' disabled')+'>全部賣出 +$'+bag().toLocaleString()+'</button>';
+
+  h+='<h3>🎣 本島專屬釣竿</h3>';
+  h+='<div class="row"><span>目前裝備：<b>'+R.n+'</b></span><span>幸運 '+R.luck+'・控制 '+Math.round(R.ctrl*100)+'%・韌性 '+R.res+'</span></div>';
+  const islRods=ROD.map((r,i)=>({r,i})).filter(o=>o.r.isl===si&&o.i>0);
+  if(!islRods.length){
+    h+='<div class="row dim"><span>本島沒有販售額外釣竿</span></div>';
+  }else{
+    islRods.forEach(({r,i})=>{
+      const qNeed=r.q>=0,qDone=!qNeed||questOK(r.q);
+      const qText=qNeed?'<br><small style="color:'+(qDone?'#7bd88f':'#ffd23f')+'">任務：'+QT[r.q]+(qDone?'（✔ 已達成）':'（未完成）')+'</small>':'';
+      let btn='';
+      if(rodLv===i)btn='<button class="sm alt" disabled>裝備中</button>';
+      else if(own[i])btn='<button class="sm eq-rod" data-i="'+i+'">裝備</button>';
+      else btn='<button class="sm buy-rod" data-i="'+i+'"'+((money>=r.p&&qDone)?'':' disabled')+'>購買 $'+r.p.toLocaleString()+'</button>';
+      h+='<div class="row"><div><b>'+r.n+'</b><br><small>幸運 '+r.luck+'・控制 '+Math.round(r.ctrl*100)+'%・韌性 '+r.res+'</small>'+qText+'</div><div>'+btn+'</div></div>';
+    });
+  }
+
+  if(si===0){
+    h+='<h3>⛵ 新手港灣造船廠</h3>';
+    BOATS.forEach((b,i)=>{
+      let btn='';
+      if(boatLv===i)btn='<button class="sm alt" disabled>使用中</button>';
+      else if(bown[i])btn='<button class="sm eq-boat" data-i="'+i+'">切換</button>';
+      else btn='<button class="sm buy-boat" data-i="'+i+'"'+(money>=b.p?'':' disabled')+'>購買 $'+b.p.toLocaleString()+'</button>';
+      h+='<div class="row"><div><b>'+b.n+'</b><br><small>最高航速 '+b.v+' 節・加速度 '+b.a+'</small></div><div>'+btn+'</div></div>';
+    });
+  }
+
+  h+='<button id="cl" class="alt full">關閉商店（E / Esc）</button>';
+  $('panel').innerHTML=h;
+
+  const s=$('sell');if(s)s.onclick=sell;
+  $('cl').onclick=togglePanel;
+  document.querySelectorAll('.buy-rod').forEach(el=>el.onclick=()=>{
+    const i=+el.dataset.i,r=ROD[i];
+    if(money<r.p||(r.q>=0&&!questOK(r.q)))return;
+    money-=r.p;own[i]=true;rodLv=i;sfx('coin');showPop('購得：'+r.n);hud();renderPanel();persist();
+  });
+  document.querySelectorAll('.eq-rod').forEach(el=>el.onclick=()=>{
+    rodLv=+el.dataset.i;showPop('裝備：'+ROD[rodLv].n);hud();renderPanel();persist();
+  });
+  document.querySelectorAll('.buy-boat').forEach(el=>el.onclick=()=>{
+    const i=+el.dataset.i,b=BOATS[i];
+    if(money<b.p)return;
+    money-=b.p;bown[i]=true;setBoat(i);sfx('coin');showPop('新船下水：'+b.n);hud();renderPanel();persist();
+  });
+  document.querySelectorAll('.eq-boat').forEach(el=>el.onclick=()=>{
+    setBoat(+el.dataset.i);showPop('更換船隻：'+BOATS[boatLv].n);hud();renderPanel();persist();
+  });
+}
+
+function togglePanel(){
+  const p=$('panel');
+  if(!p.classList.contains('show')){
+    if(!nearShop()){showPop('走近商店才能交易');return}
+    closeAllModals();
+    p.classList.add('show');hold=false;
+    if(!('ontouchstart' in window))setSL(false);
+    renderPanel();
+  }else{
+    p.classList.remove('show');
+  }
+}
+function sell(){const w=bag();if(!w)return;money+=w;earned+=w;inv=[];sfx('coin');showPop('賣出 +$'+w.toLocaleString());hud();renderPanel();persist()}
+$('shopbtn').onclick=togglePanel;
+
+/* ---- 圖鑑與任務面板（B 鍵） ---- */
+let dexOpen=false;
+function renderDex(){
+  const caughtCount=best.filter(x=>x>0).length;
+  const totalCaught=cnt.reduce((a,b)=>a+b,0);
+  let h='<h2>📖 魚類圖鑑（'+caughtCount+'／'+SP.length+'）</h2>';
+  h+='<div class="row"><span>累計釣獲：'+totalCaught+' 條</span><span>累計賣魚收入：$'+(earned||0).toLocaleString()+'</span></div>';
+  h+='<h3>🏆 傳奇釣竿任務進度</h3>';
+  QT.forEach((q,i)=>{
+    const ok=questOK(i);
+    h+='<div class="row"><span>'+(ok?'✅':'⬜')+' '+q+'</span><span style="color:'+(ok?'#7bd88f':'#ffd23f')+'">'+(ok?'已完成':'進行中')+'</span></div>';
+  });
+  h+='<h3>🐟 魚種名錄</h3>';
+  SP.forEach((s,i)=>{
+    const got=best[i]>0;
+    const zones=s.z.map(zi=>ISL[zi].n).join('、');
+    let mutBadges='';
+    if(got){
+      MUT.forEach((m,mi)=>{if(mus[i]&(1<<mi))mutBadges+='<span class="tag">'+m[0]+'</span>'});
+    }
+    h+='<div class="row'+(got?'':' dim')+'"><div><b style="color:'+RC[s.r]+'">'+(got?s.n:'？？？')+'</b>'+(s.night?'<span class="tag">🌙夜晚</span>':'')+mutBadges+'<br><small>棲息：'+zones+'</small></div><div style="text-align:right">'+RN[s.r]+'<br><small>'+(got?'最重 '+best[i]+' kg（'+cnt[i]+'條）':'尚未捕獲')+'</small></div></div>';
+  });
+  h+='<button id="dexx" class="alt full">關閉圖鑑（B / Esc）</button>';
+  $('dexbox').innerHTML=h;
+  $('dexx').onclick=toggleDex;
+}
+function toggleDex(){
+  if(!dexOpen){
+    closeAllModals();
+    dexOpen=true;$('dexbox').classList.add('show');hold=false;
+    if(!('ontouchstart' in window))setSL(false);
+    renderDex();
+  }else{
+    dexOpen=false;$('dexbox').classList.remove('show');
+  }
+}
+$('dexbtn').onclick=toggleDex;
+
+/* ---- 開船與靠岸 ---- */
+function toggleBoat(){
+  if(!playing||st!=='idle'||panelOpen()||mapOpen||dexOpen)return;
+  const I=ISL[zoneAt(P.x,P.z)],dx=P.x-I.cx,dz=P.z-I.cz,d=Math.hypot(dx,dz)||1;
+  if(!onBoat){
+    if(d<I.r-6){showPop('走到島嶼岸邊才能上船');return}
+    boat.x=I.cx+dx/d*(I.r+5);boat.z=I.cz+dz/d*(I.r+5);
+    P.x=boat.x;P.z=boat.z;P.a=Math.atan2(dz,dx);cy=P.a;boatV=0;onBoat=true;
+    splash(boat.x,boat.z);sfx('splash');showPop('⛵ 出海航行！');
+  }else{
+    if(d>I.r+11){showPop('靠近島嶼岸邊才能靠岸');return}
+    P.x=I.cx+dx/d*(I.r-2.5);P.z=I.cz+dz/d*(I.r-2.5);
+    onBoat=false;boatV=0;showPop('🏝 靠岸：'+I.n);
+  }
+  hud();
+}
+$('boatbtn').onclick=toggleBoat;
+
+/* ---- 小地圖與大地圖（M 鍵） ---- */
+let mapOpen=false;
+function toggleMap(){
+  if(!mapOpen){
+    closeAllModals();
+    mapOpen=true;$('mapbox').style.display='block';hold=false;
+    if(!('ontouchstart' in window))setSL(false);
+    drawMap($('bigmap'),640,true);
+  }else{
+    mapOpen=false;$('mapbox').style.display='none';
+  }
+}
+$('mapbtn').onclick=toggleMap;$('mapx').onclick=toggleMap;$('mini').onclick=toggleMap;
+
+function drawMap(cvs,sz,full){
+  const g=cvs.getContext('2d');
+  g.fillStyle='#0d3b5c';g.fillRect(0,0,sz,sz);
+  // 網格線
+  g.strokeStyle='rgba(255,255,255,.07)';g.lineWidth=1;
+  const step=sz/8;
+  for(let i=1;i<8;i++){g.beginPath();g.moveTo(i*step,0);g.lineTo(i*step,sz);g.stroke();g.beginPath();g.moveTo(0,i*step);g.lineTo(sz,i*step);g.stroke()}
+
+  const sc=full?(sz/920):(sz/460);
+  const cx=full?0:P.x,cz=full?-210:P.z;
+  const toX=x=>sz/2+(x-cx)*sc,toY=z=>sz/2+(z-cz)*sc;
+
+  ISL.forEach((I,idx)=>{
+    const x=toX(I.cx),y=toY(I.cz),r=Math.max(4,I.r*sc);
+    // 淺灘光暈
+    g.fillStyle='rgba(88,224,210,.22)';g.beginPath();g.arc(x,y,r*1.8,0,7);g.fill();
+    // 島嶼本體
+    g.fillStyle=vis[idx]?'#'+I.grass.toString(16).padStart(6,'0'):'#355266';
+    g.beginPath();g.arc(x,y,r,0,7);g.fill();
+    g.strokeStyle=vis[idx]?'#e6d5a1':'rgba(255,255,255,.3)';g.lineWidth=2;g.stroke();
+    if(full||r>6){
+      g.fillStyle=vis[idx]?'#f6ead3':'rgba(255,255,255,.55)';
+      g.font=(full?'bold 14px':'10px')+' sans-serif';g.textAlign='center';
+      g.fillText(vis[idx]?I.n:'未知島嶼',x,y-r-5);
+    }
+  });
+
+  // 玩家視線方向與位置
+  const px=toX(P.x),py=toY(P.z);
+  g.save();g.translate(px,py);g.rotate(P.a);
+  g.fillStyle='rgba(255,226,122,.32)';g.beginPath();g.moveTo(0,0);g.arc(0,0,full?24:16,-.45,.45);g.closePath();g.fill();
+  g.fillStyle='#ff5f6d';g.beginPath();g.moveTo(full?9:6,0);g.lineTo(full?-6:-4,full?5:3.5);g.lineTo(full?-6:-4,full?-5:-3.5);g.closePath();g.fill();
+  g.restore();
+}
+
+/* ---- 右側玩家狀態面板 ---- */
+function updatePlayerCard(){
+  const R=ROD[rodLv],B=BOATS[boatLv],caught=best.filter(x=>x>0).length;
+  $('pl').innerHTML=
+    '<div><span>🎣 釣竿</span><b>'+R.n+'</b></div>'+
+    '<div><span>⛵ 船隻</span><b>'+B.n+'</b></div>'+
+    '<div><span>📖 圖鑑</span><b>'+caught+' / '+SP.length+'</b></div>'+
+    (lastCatch?'<div><span>🐟 最近</span><b>'+lastCatch+'</b></div>':'');
+}
+
+/* ---- 虛擬搖桿（擴大觸控熱區並阻擋鏡頭干擾） ---- */
+const joy=$('joy'),knob=$('knob');
+function handleJoyMove(cx0,cy0){
+  const r=joy.getBoundingClientRect(),mx=r.left+r.width/2,my=r.top+r.height/2;
+  let dx=cx0-mx,dy=cy0-my;const maxR=48,d=Math.hypot(dx,dy);
+  if(d>maxR){dx=dx/d*maxR;dy=dy/d*maxR}
+  jx=dx/maxR;jz=dy/maxR;
+  knob.style.transform='translate('+dx+'px,'+dy+'px)';
+}
+joy.addEventListener('pointerdown',e=>{e.stopPropagation();joy.setPointerCapture(e.pointerId);joyId=e.pointerId;handleJoyMove(e.clientX,e.clientY)});
+joy.addEventListener('pointermove',e=>{if(e.pointerId===joyId){e.stopPropagation();handleJoyMove(e.clientX,e.clientY)}});
+function resetJoy(e){if(e.pointerId===joyId){joyId=null;jx=0;jz=0;knob.style.transform='translate(0,0)'}}
+joy.addEventListener('pointerup',resetJoy);joy.addEventListener('pointercancel',resetJoy);
+
+/* ---- 行動按鈕與滑鼠 / 觸控鏡頭 ---- */
+const act=$('act');
+act.addEventListener('pointerdown',e=>{e.stopPropagation();down()});
+act.addEventListener('pointerup',e=>{e.stopPropagation();up()});
+act.addEventListener('pointercancel',e=>{e.stopPropagation();up()});
+
+cv.addEventListener('pointerdown',e=>{
+  if(!playing||panelOpen()||mapOpen||dexOpen)return;
+  if(e.pointerType==='mouse'){
+    if(e.button===0)down();
+    else if(e.button===2){rot=true;rotId=e.pointerId;lx=e.clientX;ly=e.clientY}
+  }else{
+    rot=true;rotId=e.pointerId;lx=e.clientX;ly=e.clientY;
+  }
+});
+addEventListener('pointermove',e=>{
+  if(!playing)return;
+  if(document.pointerLockElement===cv){
+    cy+=e.movementX*.0032;
+    cp=Math.max(.08,Math.min(1.25,cp+e.movementY*.0032));
+  }else if(rot&&e.pointerId===rotId){
+    cy+=(e.clientX-lx)*.0055;
+    cp=Math.max(.08,Math.min(1.25,cp+(e.clientY-ly)*.0055));
+    lx=e.clientX;ly=e.clientY;
+  }
+});
+addEventListener('pointerup',e=>{
+  if(e.pointerType==='mouse'&&e.button===0)up();
+  if(e.pointerId===rotId){rot=false;rotId=-1}
+});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+
+addEventListener('keydown',e=>{
+  if(!playing)return;
+  const k=e.code;
+  if(k==='ShiftLeft'||k==='ShiftRight'){e.preventDefault();setSL(!sl);return}
+  if(k==='Escape'){closeAllModals();return}
+  if(k==='KeyM'){toggleMap();return}
+  if(k==='KeyB'){toggleDex();return}
+  if(k==='KeyE'){if(!panelOpen()&&!nearShop())return;togglePanel();return}
+  if(k==='KeyF'){toggleBoat();return}
+  if(k==='Space'){e.preventDefault();if(!e.repeat)down();return}
+  ks[k]=true;
+});
+addEventListener('keyup',e=>{
+  const k=e.code;
+  if(k==='Space')up();
+  ks[k]=false;
+});
+
+$('b').onclick=()=>{
+  $('ov').classList.add('hide');
+  playing=true;
+  hud();updatePlayerCard();
+  if(!('ontouchstart' in window))setSL(true);
+};
+
+/* ---- 主遊戲迴圈 ---- */
+let lastTime=performance.now(),worldTime=0;
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt=Math.min(.05,(now-lastTime)/1000);
+  lastTime=now;
+  worldTime+=dt;
+
+  // 日夜循環（每 3 分鐘一個完整日夜）
+  const dayPhase=(worldTime%180)/180;
+  const nightAmt=Math.max(0,Math.sin(dayPhase*Math.PI*2)*-1);
+  const wasNight=isNight;
+  isNight=nightAmt>.45;
+  if(wasNight!==isNight&&playing){
+    hud();
+    showPop(isNight?'🌙 夜幕降臨，夜行魚出沒！':'☀️ 清晨到來');
+  }
+  scene.background.copy(SKY_D).lerp(SKY_N,nightAmt*.88);
+  scene.fog.color.copy(scene.background);
+  sun.intensity=.88*(1-nightAmt*.72);
+  amb.intensity=.78*(1-nightAmt*.55);
+
+  ambient(worldTime,dt);
+
+  if(playing){
+    // 移動輸入計算
+    let ix=jx,iz=jz;
+    if(ks['KeyW']||ks['ArrowUp'])iz-=1;
+    if(ks['KeyS']||ks['ArrowDown'])iz+=1;
+    if(ks['KeyA']||ks['ArrowLeft'])ix-=1;
+    if(ks['KeyD']||ks['ArrowRight'])ix+=1;
+    const il=Math.hypot(ix,iz);
+    if(il>1){ix/=il;iz/=il}
+
+    const busy=panelOpen()||mapOpen||dexOpen||st==='reel';
+    if(!busy){
+      const fwdX=Math.cos(cy),fwdZ=Math.sin(cy);
+      const rightX=-fwdZ,rightZ=fwdX;
+      const wx=rightX*ix-fwdX*iz;
+      const wz=rightZ*ix-fwdZ*iz;
+      const moving=Math.hypot(wx,wz)>.05;
+
+      if(onBoat){
+        const B=BOATS[boatLv];
+        if(moving){
+          const targetA=Math.atan2(wz,wx);
+          let da=targetA-P.a;while(da>Math.PI)da-=Math.PI*2;while(da<-Math.PI)da+=Math.PI*2;
+          P.a+=da*Math.min(1,dt*3.2);
+          boatV=Math.min(B.v,boatV+B.a*22*dt);
+        }else{
+          boatV*=Math.pow(.25,dt);
+        }
+        const nx=P.x+Math.cos(P.a)*boatV*dt;
+        const nz=P.z+Math.sin(P.a)*boatV*dt;
+        if(!land(nx,nz)){P.x=nx;P.z=nz}
+        else{boatV*=-.25}
+        boat.x=P.x;boat.z=P.z;boat.a=P.a;
+        if(Math.abs(boatV)>3&&RD()<dt*8)splash(P.x-Math.cos(P.a)*3,P.z-Math.sin(P.a)*3);
+      }else{
+        if(moving&&st==='idle'){
+          const spd=11;
+          const nx=P.x+wx*spd*dt,nz=P.z+wz*spd*dt;
+          if(land(nx,nz)||onBridge(nx,nz)){P.x=nx;P.z=nz}
+          if(!sl)P.a=Math.atan2(wz,wx);
+          wk+=dt*12;
+        }else{
+          wk=0;
+        }
+        if(sl&&st==='idle')P.a=cy;
+      }
+    }
+
+    // 探索新島嶼解鎖
+    const curZ=zoneAt(P.x,P.z);
+    if(!vis[curZ]){
+      vis[curZ]=true;
+      showPop('🗺 發現新島嶼：'+ISL[curZ].n);
+      persist();
+    }
+
+    // 更新角色與船隻模型位置
+    if(onBoat){
+      boatM.visible=true;
+      boatM.position.set(boat.x,.18+Math.sin(worldTime*3)*.06,boat.z);
+      boatM.rotation.y=-boat.a;
+      boatM.rotation.z=Math.sin(worldTime*2.5)*.03;
+      me.position.set(boat.x+Math.cos(boat.a)*1.3,1.25+Math.sin(worldTime*3)*.06,boat.z+Math.sin(boat.a)*1.3);
+      me.rotation.y=-P.a;
+      me.userData.l1.rotation.z=0;me.userData.l2.rotation.z=0;
+    }else{
+      boatM.visible=false;
+      me.position.set(P.x,.6,P.z);
+      me.rotation.y=-P.a;
+      const swing=Math.sin(wk)*.55;
+      me.userData.l1.rotation.z=swing;
+      me.userData.l2.rotation.z=-swing;
+    }
+    sun.position.set(P.x+30,60,P.z+20);
+    sun.target.position.set(P.x,0,P.z);
+
+    // 瞄準落點指示環
+    const R=ROD[rodLv];
+    const checkDist=st==='charge'?(3+ch*(R.pow-3)):7;
+    const ax=P.x+Math.cos(P.a)*checkDist,az=P.z+Math.sin(P.a)*checkDist;
+    aim.ok=!land(ax,az);aim.x=ax;aim.z=az;
+    mk.visible=(st==='idle'||st==='charge')&&aim.ok&&!panelOpen()&&!mapOpen&&!dexOpen;
+    if(mk.visible){
+      mk.position.set(ax,.22,az);
+      mk.material.color.setHex(st==='charge'?0xff5f6d:0xffe27a);
+    }
+
+    // 釣魚狀態機更新
+    if(st==='charge'){
+      ch+=chd*dt*1.35;
+      if(ch>=1){ch=1;chd=-1}else if(ch<=0){ch=0;chd=1}
+      $('chg').firstElementChild.style.width=(ch*100)+'%';
+    }else if(st==='wait'){
+      bob.position.y=.22+Math.sin(worldTime*5)*.06;
+      setLine(myLine,tipOf(me),bob.position);
+      tw-=dt;
+      if(tw<=0){
+        st='bite';bt=1.45;F=roll();
+        sfx('bite');showPop('❗ 咬鉤了！快按！');
+        splash(hx,hz);
+      }
+    }else if(st==='bite'){
+      bob.position.y=-.15+Math.sin(worldTime*28)*.08;
+      setLine(myLine,tipOf(me),bob.position);
+      bt-=dt;
+      if(bt<=0){
+        st='idle';bob.visible=false;myLine.l.visible=false;
+        sfx('fail');showPop('太慢了，魚跑掉了…');
+      }
+    }else if(st==='reel'){
+      bob.position.set(hx+Math.sin(worldTime*16)*.35,.1,hz+Math.cos(worldTime*14)*.35);
+      setLine(myLine,tipOf(me),bob.position);
+      const R=ROD[rodLv];
+      const barH=Math.min(.62,R.ctrl);
+      // 玩家控制綠色框物理
+      bv+=(hold?2.35:-2.05)*dt;
+      bv*=Math.pow(.18,dt);
+      bpos+=bv*dt;
+      if(bpos<0){bpos=0;bv=Math.max(0,bv)}
+      if(bpos>1-barH){bpos=1-barH;bv=Math.min(0,bv)}
+
+      // 魚的 AI 游動（稀有度越高越活躍，韌性可抑制暴衝）
+      ftm-=dt;
+      if(ftm<=0){
+        const agility=1+F.s.r*.38*(1-R.res/120);
+        ftm=(.45+RD()*.85)/agility;
+        ft=Math.max(.05,Math.min(.95,RD()));
+      }
+      const fishSpd=(1.4+F.s.r*.55)*(1-R.res/140);
+      fp+=(ft-fp)*Math.min(1,dt*fishSpd);
+
+      const inside=fp>=bpos-.03&&fp<=bpos+barH+.03;
+      prog+=(inside?.24:-.19*(1-R.res/180))*dt;
+      $('bar').style.height=(barH*100)+'%';
+      $('bar').style.bottom=(bpos*100)+'%';
+      $('bar').style.background=inside?'rgba(123,216,143,.85)':'rgba(255,110,110,.65)';
+      $('fsh').style.bottom=(fp*100)+'%';
+      $('prg').firstElementChild.style.height=(Math.max(0,Math.min(1,prog))*100)+'%';
+
+      if(prog>=1)endReel(true);
+      else if(prog<=0)endReel(false);
+    }
+
+    // 結果提示自動隱藏
+    if(resT>0){resT-=dt;if(resT<=0)$('res').style.display='none'}
+
+    // 動態更新按鈕狀態與文字
+    act.textContent=st==='idle'?'拋竿':st==='charge'?'放開！':st==='wait'?'等待…':st==='bite'?'上鉤！':'拉線！';
+    act.style.background=st==='bite'?'#ff5f6d':st==='reel'?'#7bd88f':'var(--accent)';
+    $('shopbtn').style.display=(nearShop()&&st==='idle'&&!panelOpen())?'block':'none';
+
+    const I=ISL[curZ],dShore=Math.hypot(P.x-I.cx,P.z-I.cz);
+    const canBoard=!onBoat&&dShore>=I.r-6&&st==='idle';
+    const canDock=onBoat&&dShore<=I.r+11&&st==='idle';
+    const bb=$('boatbtn');
+    if((canBoard||canDock)&&!panelOpen()){
+      bb.style.display='block';
+      bb.textContent=onBoat?'🏝 靠岸（F）':'⛵ 上船（F）';
+    }else{
+      bb.style.display='none';
+    }
+
+    // 定期更新小地圖與狀態欄
+    if(wf){
+      drawMap($('mini'),140,false);
+      updatePlayerCard();
+    }
+  }
+
+  // 平滑相機阻尼跟隨
+  camYaw+=(cy-camYaw)*Math.min(1,dt*14);
+  camPitch+=(cp-camPitch)*Math.min(1,dt*14);
+  const camDist=onBoat?19:14.5;
+  const cx=P.x-Math.cos(camYaw)*Math.cos(camPitch)*camDist;
+  const cz=P.z-Math.sin(camYaw)*Math.cos(camPitch)*camDist;
+  const cyPos=P.y||1.6 + Math.sin(camPitch)*camDist;
+  cam.position.set(cx,Math.max(2.2,1.6+Math.sin(camPitch)*camDist),cz);
+  cam.lookAt(P.x+Math.cos(camYaw)*2.5,2.2,P.z+Math.sin(camYaw)*2.5);
+
+  renderer.render(scene,cam);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
